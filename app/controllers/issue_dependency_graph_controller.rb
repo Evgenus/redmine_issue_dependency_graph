@@ -82,6 +82,7 @@ class IssueDependencyGraphController < ApplicationController
         IO.popen("unflatten | dot -Tpng", "r+") do |io|
             io.binmode
             io.puts "digraph redmine {"
+            io.puts "graph [rankdir=LR];"
             issues.uniq.each do |i|
                 colour = i.closed? ? 'grey' : 'black'
                 io.puts "#{i.id} [label=\"##{i.id}: #{render_title(i)}\", fontcolor=#{colour}]"
