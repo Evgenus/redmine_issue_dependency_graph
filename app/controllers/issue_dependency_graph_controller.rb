@@ -31,6 +31,11 @@ class IssueDependencyGraphController < ApplicationController
 	end
 
 	def issue_graph
+		unless User.current && User.current.admin 
+			render_error :message => 'Only admins can view graphs', :status => 403
+			return
+		end
+
 		pending_issues = [Issue.find(params[:issue])]
 		relevant_issues = []
 		relations = []
@@ -43,9 +48,9 @@ class IssueDependencyGraphController < ApplicationController
 			if i.parent_id
 				rels << { :from => i.parent_id, :to => i.id, :type => 'child' }
 			end
-			Issue.find_all_by_parent_id(i.id).each do |child|
-				rels << { :from => i.id, :to => child.id, :type => 'child' }
-			end
+#			Issue.find_all_by_parent_id(i.id).each do |child|
+#				rels << { :from => i.id, :to => child.id, :type => 'child' }
+#			end
 
 			rels.each do |ir|
 				if ir[:from] == i.id
@@ -77,9 +82,11 @@ class IssueDependencyGraphController < ApplicationController
 		IO.popen("unflatten | dot -Tpng", "r+") do |io|
 			io.binmode
 			io.puts "digraph redmine {"
+			io.puts ' graph [fontname = "DejaVu Sans"];  node [fontname = "DroidSans"];  edge [fontname = "helvetica"]; '
+			io.puts "graph [rankdir=LR];"
 			issues.uniq.each do |i|
 				colour = i.closed? ? 'grey' : 'black'
-				io.puts "#{i.id} [label=\"##{i.id}: #{render_title(i)}\", fontcolor=#{colour}]"
+				io.puts "#{i.id} [label=\"##{i.id}: #{render_title(i)}\", color=#{colour}, fontcolor=#{colour}]"
 			end
 
 			relations.each do |ir|
@@ -91,7 +98,7 @@ class IssueDependencyGraphController < ApplicationController
 					when 'precedes' then "#{ir[:to]} -> #{ir[:from]} [style=solid,  color=black dir=back]"
 					when 'relates'  then "#{ir[:from]} -> #{ir[:to]} [style=dotted, color=black dir=none]"
 					when 'child'    then "#{ir[:from]} -> #{ir[:to]} [style=dashed, color=grey]"
-					else "#{ir[:from]} -> #{ir[:to]} [style=bold, color=pink]"
+					else "#{ir[:from]} -> #{ir[:to]} [style=dashed, color=green]"
 				end
 			end
 
